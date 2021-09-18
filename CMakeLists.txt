@@ -18,3 +18,6 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
 )
+
+add_executable(obstacle_avoidance src/obstacle_avoidance.cpp)
+target_link_libraries(obstacle_avoidance ${catkin_LIBRARIES})
