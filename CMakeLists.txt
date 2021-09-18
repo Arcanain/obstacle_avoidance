@@ -10,7 +10,7 @@ find_package(catkin REQUIRED
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES obstacle_avoidance
-#  CATKIN_DEPENDS other_catkin_pkg
+   CATKIN_DEPENDS roscpp sensor_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 

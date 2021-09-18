@@ -12,5 +12,5 @@
 
   <!-- obstacle aboidance node  -->
   <node pkg="obstacle_avoidance" name="obstacle_avoidance" type="obstacle_avoidance"/>
-
+  
 </launch>

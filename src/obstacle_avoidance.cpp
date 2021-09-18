@@ -1,71 +1,156 @@
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
+/*
+ * ********************************************************************************
+ * SYSTEM            | obstacle aboidance
+ * Publisher         | cmd_vel_pub
+ * 					 | state_pub
+ * Subscriber        | scan_sub
+ * ********************************************************************************
+*/
+#include <ros/ros.h>
+#include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
-#include <stdio.h>
+#include <sensor_msgs/LaserScan.h>
+#include <tf/transform_datatypes.h>
+#include <std_msgs/Int8.h>
 
-float min_range,min_range_angle;
+ros::Publisher cmd_vel_pub;
+ros::Publisher state_pub;
+ros::Subscriber scan_sub;
 
-ros::Publisher vel_pub;
-geometry_msgs::Twist cmdvel;
+geometry_msgs::Twist cmd_vel;
+sensor_msgs::LaserScan latest_scan;
 
-void chatterCallback(const sensor_msgs::LaserScan::ConstPtr& msg)
+void scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg)
 {
- // printf("Position: [%f] [%f]\n", msg->range_min,msg->range_max);
-	min_range=msg->ranges[0];
-	min_range_angle=0;
-	for(int j=0;j<=360;j++) //increment by one degree
-		{
-		  	if(msg->ranges[j]<min_range)
-			{
-				min_range=msg->ranges[j];
-				min_range_angle=j/2;
-			}
-		}
-		printf("minimum range is [%f] at an angle of [%f]\n",min_range,min_range_angle);
-	if(min_range<=1.2)  // min_range<=0.5 gave box pushing like behaviour, min_range<=1.2 gave obstacle avoidance
-	{
-		if(min_range_angle<90)
-		{
-			 cmdvel.angular.z=1.0;
-			 cmdvel.linear.x=0;
-			 printf("left\n");
-		}
-		else
-		{
-			 cmdvel.angular.z=-1.0;
-			 cmdvel.linear.x=0;
-			 printf("right\n");
-		}
-	}
-	else
-	{
-		cmdvel.linear.x=1.0;
-		cmdvel.angular.z=0;
-		printf("straight\n");
-	}
-	 
-	 vel_pub.publish(cmdvel);
-
+    latest_scan = *msg;
 }
 
-int main(int argc, char **argv)
+// 以下rplidar a1 m8依存(使用するlidarによって正面の配列構造が変わる)
+// Monitoring 0~60° in front
+float observation_front_right()
 {
-  
-  ros::init(argc, argv, "obstacle_avoidance");
-  ros::NodeHandle n;
-  ros::NodeHandle nh;
-  vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel_obstacle_avoidance",10);
-  // instead of pr2, if the node has to be used for roomba use "cmd_vel" instead of "base_controller/command"
-  cmdvel.linear.x=0;
-  cmdvel.linear.y=0;
-  cmdvel.linear.z=0;
-  cmdvel.angular.x=0;
-  cmdvel.angular.y=0;
-  cmdvel.angular.z=0; 
+    float min_range = 1000.0f;
+    float min_range_angle = 0.0f;
+    
+    for (int i = 180; i < 240; i++) {
+        /**
+        ***********************************************************************
+        * First condition  |  In case of an error value
+        * Second condition |  Out of measurement range
+        * Third condition  |  For infinity
+        ***********************************************************************
+        */
+        if (latest_scan.ranges[i] < latest_scan.range_min || latest_scan.ranges[i] > latest_scan.range_max || std::isnan(latest_scan.ranges[i])) {
+            // 測定範囲外 = 正面に十分な距離があるわけではない。(場合によっては、とても近い距離かもしれない)
+            ROS_INFO("i = %d, front-range: measurement error", i);
+        } else {
+            if(latest_scan.ranges[i] < min_range) {
+                min_range = latest_scan.ranges[i];
+                ROS_INFO("i = %d, front-range: %0.3f", i, latest_scan.ranges[i]);
+                //min_range_angle = i;
+            }
+        }
+    }
 
-  ros::Subscriber sub = n.subscribe("/scan", 1, chatterCallback);
+    return min_range;
+}
 
-  ros::spin();
+// 以下rplidar a1 m8依存(使用するlidarによって正面の配列構造が変わる)
+// Monitoring -60~0° in front
+float observation_front_left()
+{
+    float min_range = 1000.0f;
+    float min_range_angle = 0.0f;
+    
+    for(int i = 120; i < 180; i++) {
+        /**
+        ***********************************************************************
+        * First condition  |  In case of an error value
+        * Second condition |  Out of measurement range
+        * Third condition  |  For infinity
+        ***********************************************************************
+        */
+        if (latest_scan.ranges[i] < latest_scan.range_min || latest_scan.ranges[i] > latest_scan.range_max || std::isnan(latest_scan.ranges[i])) {
+            // 測定範囲外 = 正面に十分な距離があるわけではない。(場合によっては、とても近い距離かもしれない)
+            ROS_INFO("i = %d, front-range: measurement error", i);
+        } else {
+            if(latest_scan.ranges[i] < min_range) {
+                min_range = latest_scan.ranges[i];
+                ROS_INFO("i = %d, front-range: %0.3f", i, latest_scan.ranges[i]);
+                //min_range_angle = i;
+            }
+        }
+    }
 
-  return 0;
+    return min_range;
+}
+
+// Monitoring in front
+int obstacle_detection()
+{
+    /* state = 0 right
+       state = 1 left
+       state = 2 no detection
+    */
+    int state;
+
+    float right_min_range = observation_front_right();
+    float left_min_range  = observation_front_left();
+
+    if ( (right_min_range <= 1.2) || (left_min_range <= 1.2) ) {
+        if (right_min_range < left_min_range) {
+            state = 0;
+        } else if (right_min_range > left_min_range) {
+            state = 1;
+        }
+    } else {
+        state = 2;
+    }
+
+    return state;
+}
+
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "obstacle_avoidance");
+
+    ros::NodeHandle nh;
+    scan_sub    = nh.subscribe("/scan", 10, scan_callback);
+    cmd_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel_obstacle_avoidance", 10);
+    state_pub   = nh.advertise<std_msgs::Int8>("/state_obstacle_avoidance", 10);
+
+    ros::Rate rate(10.0);
+
+    while(ros::ok()) {
+        std_msgs::Int8 msg;
+
+        ros::spinOnce();
+
+        if (latest_scan.ranges.size() > 0) {
+            /* state = 0 right
+               state = 1 left
+               state = 2 no detection
+            */
+            int state = obstacle_detection();
+            msg.data = state;
+
+            if (state == 0) {
+                cmd_vel.linear.x  = 0.0;
+                cmd_vel.angular.z = 1.0;
+            } else if (state == 1) {
+                cmd_vel.linear.x  = 0.0;
+                cmd_vel.angular.z = -1.0;
+            } else if (state == 2) {
+                cmd_vel.linear.x  = 0.0;
+                cmd_vel.angular.z = 0.0;
+            }
+            
+            cmd_vel_pub.publish(cmd_vel);
+            state_pub.publish(msg);
+        }
+
+        rate.sleep();
+    }
+
+    return 0;
 }
