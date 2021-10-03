@@ -16,4 +16,10 @@ source devel/setup.bash
 roslaunch supervisor supervisor.launch 
 ```
 
-[supervisor](https://github.com/TSUKUBA-CHALLENGE/supervisor)
+- supervisor  
+https://github.com/TSUKUBA-CHALLENGE/supervisor
+
+# rviz
+
+https://user-images.githubusercontent.com/52307432/135758904-fef764f8-6f30-45e3-a03f-15118d730925.mp4
+
