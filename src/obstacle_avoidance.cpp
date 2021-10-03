@@ -136,10 +136,10 @@ int main(int argc, char** argv)
 
             if (state == 0) {
                 cmd_vel.linear.x  = 0.0;
-                cmd_vel.angular.z = 1.0;
+                cmd_vel.angular.z = 0.0;
             } else if (state == 1) {
                 cmd_vel.linear.x  = 0.0;
-                cmd_vel.angular.z = -1.0;
+                cmd_vel.angular.z = 0.0;
             } else if (state == 2) {
                 cmd_vel.linear.x  = 0.0;
                 cmd_vel.angular.z = 0.0;
