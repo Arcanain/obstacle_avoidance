@@ -25,14 +25,15 @@ void scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg)
     latest_scan = *msg;
 }
 
-// 以下rplidar a1 m8依存(使用するlidarによって正面の配列構造が変わる)
-// Monitoring 0~60° in front
+// 以下URM-40-LC-EW依存(使用するlidarによって正面の配列構造が変わる)
+// Monitoring 0~90° in front
 float observation_front_right()
 {
     float min_range = 1000.0f;
     float min_range_angle = 0.0f;
     
-    for (int i = 180; i < 240; i++) {
+    for (int i = 360; i < 1080; i++) {
+    //for (int i = 180; i < 240; i++) {
         /**
         ***********************************************************************
         * First condition  |  In case of an error value
@@ -55,14 +56,15 @@ float observation_front_right()
     return min_range;
 }
 
-// 以下rplidar a1 m8依存(使用するlidarによって正面の配列構造が変わる)
-// Monitoring -60~0° in front
+// 以下URM-40-LC-EW依存(使用するlidarによって正面の配列構造が変わる)
+// Monitoring 90~180° in front
 float observation_front_left()
 {
     float min_range = 1000.0f;
     float min_range_angle = 0.0f;
     
-    for(int i = 120; i < 180; i++) {
+    for(int i = 1080; i <= 1800; i++) {
+    //for(int i = 120; i < 180; i++) {
         /**
         ***********************************************************************
         * First condition  |  In case of an error value
@@ -97,7 +99,7 @@ int obstacle_detection()
     float right_min_range = observation_front_right();
     float left_min_range  = observation_front_left();
 
-    if ( (right_min_range <= 1.2) || (left_min_range <= 1.2) ) {
+    if ( (right_min_range <= 0.3) || (left_min_range <= 0.3) ) {
         if (right_min_range < left_min_range) {
             state = 0;
         } else if (right_min_range > left_min_range) {
@@ -115,7 +117,7 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "obstacle_avoidance");
 
     ros::NodeHandle nh;
-    scan_sub    = nh.subscribe("/scan", 10, scan_callback);
+    scan_sub    = nh.subscribe("/scan", 1000, scan_callback);
     cmd_vel_pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel_obstacle_avoidance", 10);
     state_pub   = nh.advertise<std_msgs::Int8>("/state_obstacle_avoidance", 10);
 
