@@ -26,6 +26,8 @@ void scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg)
 }
 
 // 以下URM-40-LC-EW依存(使用するlidarによって正面の配列構造が変わる)
+// hokuyo lidar scan範囲仕様：https://www.hokuyo-aut.co.jp/search/single.php?serial=21
+// URM-40-LC-EWでは検出範囲270°、分解能0.125°、点群数2160
 // Monitoring 0~90° in front
 float observation_front_right()
 {
@@ -57,6 +59,8 @@ float observation_front_right()
 }
 
 // 以下URM-40-LC-EW依存(使用するlidarによって正面の配列構造が変わる)
+// hokuyo lidar scan範囲仕様：https://www.hokuyo-aut.co.jp/search/single.php?serial=21
+// URM-40-LC-EWでは検出範囲270°、分解能0.125°、点群数2160
 // Monitoring 90~180° in front
 float observation_front_left()
 {
