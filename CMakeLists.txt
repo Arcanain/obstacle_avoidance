@@ -21,3 +21,9 @@ include_directories(
 
 add_executable(obstacle_avoidance src/obstacle_avoidance.cpp)
 target_link_libraries(obstacle_avoidance ${catkin_LIBRARIES})
+
+add_executable(obstacle_avoidance_rplidar src/obstacle_avoidance_rplidar.cpp)
+target_link_libraries(obstacle_avoidance_rplidar ${catkin_LIBRARIES})
+
+add_executable(obstacle_avoidance_rplidar_test src/obstacle_avoidance_rplidar_test.cpp)
+target_link_libraries(obstacle_avoidance_rplidar_test ${catkin_LIBRARIES})
